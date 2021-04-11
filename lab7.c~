@@ -96,7 +96,7 @@ NODE deleterear(NODE head)
 	while (curr->next->next != NULL)
 		curr = curr->next;
 	
-	printf("Deleting %s\n", (curr->next->s).usn);
+	printf("Deleting %s\n", (head->next->s).usn);
 	free(curr->next);
 	curr->next = NULL;
 	
