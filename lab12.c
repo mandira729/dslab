@@ -3,141 +3,127 @@
 
 #define HZ 3
 
-FILE *fp;
-
 struct employee
 {
-	int empno;
-	char name[20];
-	int sal;
+    char name[30];
+    int salary, empno;
 };
-typedef struct employee EMP;
-
 
 struct hashtable
 {
-	int key;
-	long int addr;
+    int empno;
+    long address;
 };
-typedef struct hashtable ht;
 
-int hashval(int num)
+
+FILE *fp;
+
+int hashval(int key)
 {
-	return num % HZ;
+    return key % HZ;
 }
 
 
-void search(ht *h, int n)
+void insert(struct hashtable ht[])
 {
-	EMP a;
-	int hindex, countindex;
-	
-	printf("Enter emp no to search : \n");
-	scanf("%d", &(a.empno));
-	hindex = hashval(a.empno);
-	
-	countindex = hindex;
-	
-	while(h[hindex].key != a.empno)
-	{
-		hindex = (hindex + 1) % HZ;
-		if (countindex == hindex)
-		{
-			printf("Search unsuccessful\n");
-			return;
-		}
-	}
-	
-	printf("Search successful\n");
-	fseek(fp, h[hindex].addr, SEEK_SET);
-	fscanf(fp, "%d%s%d", &(a.empno), a.name, &(a.sal));
-	printf("%d%s%d\n", a.empno, a.name, a.sal);
+    int n, flag;
+    struct employee x;
+    printf("Enter the number of entries : ");
+    scanf("%d", &n);
+
+    for (int i = 0; i < n; i++)
+    {
+        flag = 0;
+        printf("Enter the employee id, name and salary : ");
+        scanf("%d %s %d", &x.empno, x.name, &x.salary);
+
+        int orghash = hashval(x.empno);
+        int currhash = orghash;
+
+        while (ht[currhash].empno != -1)
+        {
+            flag = 1;
+            currhash = (currhash + 1) % HZ;
+            if(currhash == orghash)
+            {
+                printf("Hash table full\n.Exiting.\n");
+                return;
+            }
+        }
+
+        ht[currhash].empno = x.empno;
+        ht[currhash].address = ftell(fp);
+
+        fprintf(fp, "%d %s %d ", x.empno, x.name, x.salary);
+        if (flag)
+            printf("Linear probing used and inserted successfully\n");
+        else
+            printf("Inserted without any collision.\n");
+    }
 }
 
-
-void display(ht *h, int n)
+void search(struct hashtable ht[])
 {
-	EMP a;
-	int i, j;
-	
-	for (int i = 0; i < HZ; i++)
-	{
-		if (h[i].key != -1)
-		{
-			printf("Hashtable %d %li \t", h[i].key, h[i].addr);
-			fseek(fp, h[i].addr, SEEK_SET);
-			fscanf(fp, "%d%s%d", &(a.empno), a.name, &(a.sal));
-printf("Contents in secondary storage : %d %s %d\n", a.empno, a.name, a.sal);
-		}
-	}
+    struct employee x;
+    printf("Enter the employee number to search for : ");
+    scanf("%d", &x.empno);
+
+    int hashloc = hashval(x.empno);
+    int orghash = hashloc;
+
+    while (ht[hashloc].empno != x.empno)
+    {
+        hashloc = (hashloc + 1) % HZ;
+        if (hashloc == orghash || ht[hashloc].empno == -1)
+        {
+            printf("Not found.\n");
+            return;
+        }        
+    }
+
+    fseek(fp, ht[hashloc].address, SEEK_SET);
+    fscanf(fp, "%d %s %d ", &x.empno, x.name, &x.salary);
+    printf("Data obtained : \n%d\n%s\n%d\nAt file address %li", x.empno, x.name, x.salary, ht[hashloc].address);
 }
 
-void insert(ht *h, int n)
+void display(struct hashtable ht[])
 {
-	EMP a;
-	int flag = 0;
-	int i, hindex, countindex;
-	
-	for (i = 0; i < n; i++)
-	{
-		printf("Enter empno, name and salary\n");
-		scanf("%d%s%d", &(a.empno), a.name, &(a.sal));
-		hindex = hashval(a.empno);
-		countindex = hindex;
-		
-		while(h[hindex].key != -1)
-		{
-			hindex = (hindex + 1) % HZ;
-			flag = 1;
-			
-			if (hindex == countindex)
-			{
-				printf("Entry not possible.\n");
-				return;
-			}
-		}
-		h[hindex].key = a.empno;
-		h[hindex].addr = ftell(fp);
-		
-		fprintf(fp, "%d %s %d\n", a.empno, a.name, a.sal);
-		printf("Entry successful\n");
-		if (flag)
-			printf("Linear probing used \n");
-	}
+    struct employee x;
+    for (int i = 0; i < HZ; i++)
+    {
+        if (ht[i].empno != -1)
+        {
+            fseek(fp, ht[i].address, SEEK_SET);
+            fscanf(fp, "%d %s %d ", &x.empno, x.name, &x.salary);
+            printf("\nEntry at %dth ht index and %li address in file : \n%d %s %d\n", i, ht[i].address, x.empno, x.name, x.salary);
+        }
+    }
 }
-
 
 int main()
 {
-	ht h[HZ];
-	EMP d;
-	int n, ch;
-	
-	fp = fopen("emp.txt", "w+");
-	for (n = 0; n < HZ; n++)
-		h[n].key = -1;
-	
-	while(1)
-	{
-		printf("\n\n1. Insert\n2. Search\n3. Display\n4. Exit\n");
-		printf("Enter ch : ");
-		scanf("%d", &ch);
-		rewind(fp);
-		
-		switch(ch)
-		{
-			case 1: 	printf("Enter the number of employees : ");
-						scanf("%d", &n);
-						insert(h, n);
-						break;
-						
-			case 2:		search(h, n);
-						break;
-			
-			case 3:		display(h, n);
-						break;
-						
-			default: 	exit(0);
-		}
-	}
+    struct hashtable ht[3] = {{-1, 0}, {-1, 0}, {-1, 0}};
+    int ch;
+
+    fp = fopen("emp.txt", "w+");
+
+    while(1)
+    {
+        printf("\n1. Insert\n2. Search\n3. Display\n\n:");
+        scanf("%d", &ch);
+
+        switch(ch)
+        {
+            case 1: insert(ht);
+                    break;
+                
+            case 2: search(ht);
+                    break;
+            
+            case 3: display(ht);
+                    break;
+            
+            default: return 0;
+        }
+    }
 }
